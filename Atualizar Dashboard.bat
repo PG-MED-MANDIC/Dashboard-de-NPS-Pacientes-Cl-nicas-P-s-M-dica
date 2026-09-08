@@ -10,16 +10,20 @@ if errorlevel 1 (
     exit /b 1
 )
 
-python atualizar_local.py
+python atualizar_tudo.py
 set EXITCODE=%ERRORLEVEL%
 
 echo.
 echo ============================================================
 if %EXITCODE%==0 (
-    echo Atualizacao concluida. Revise o resumo acima antes do git push.
+    echo Atualizacao concluida. Revise o resumo acima, depois rode:
+    echo   git status
+    echo   git add index.html style.css script.js
+    echo   git commit -m "Atualiza dados do dashboard"
+    echo   git push
 ) else (
-    echo A atualizacao encontrou um problema -- script.js NAO foi alterado
-    echo se a falha aconteceu antes do PASSO 3. Veja as mensagens acima.
+    echo A atualizacao encontrou um problema -- veja as mensagens acima
+    echo antes de decidir se precisa rodar de novo.
 )
 echo ============================================================
 pause

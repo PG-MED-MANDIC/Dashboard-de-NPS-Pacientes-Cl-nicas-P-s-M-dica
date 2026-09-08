@@ -43,6 +43,7 @@
       <div class="fb-chip" data-granularity="month">Mês</div>
       <div class="fb-chip" data-granularity="year">Ano</div>
     </div>
+    <button class="period-pick-btn" id="periodPickBtn" type="button" style="display:none;">Escolher período ▾</button>
     <span class="result-count" id="overviewPeriodLabel"></span>
   </div>
   <div class="kpi-row" id="kpiRow"></div>
@@ -71,12 +72,25 @@
   <div class="card">
     <div class="card-header">
       <div><h3>NPS ao longo do tempo</h3><div class="card-sub">Períodos com poucas respostas (ponto pequeno) tendem a ser mais voláteis</div></div>
-      <div style="display:flex; gap:8px; align-items:center;">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <select class="unit-select" id="timeUnitFilter" style="max-width:200px;">
+          <option value="__all__">Todas as unidades</option>
+        </select>
         <div id="timeGranularity" style="display:flex; gap:8px;">
           <div class="fb-chip" data-granularity="day">Dia</div>
           <div class="fb-chip active" data-granularity="week">Semana</div>
           <div class="fb-chip" data-granularity="month">Mês</div>
           <div class="fb-chip" data-granularity="year">Ano</div>
+        </div>
+        <div style="position:relative;">
+          <div class="fb-chip" id="engajamentoToggle">
+            <span class="dot" style="background:var(--gold-deep)"></span>Engajamento
+            <button class="chip-caret" id="engajamentoModeBtn" type="button" aria-label="Opções de exibição do Engajamento">▾</button>
+          </div>
+          <div class="mini-dropdown" id="engajamentoModeMenu" hidden>
+            <div class="period-option" data-mode="both">Mostrar NPS + Engajamento</div>
+            <div class="period-option" data-mode="only">Mostrar só Engajamento</div>
+          </div>
         </div>
         <button class="table-toggle" data-target="weekTable">Ver tabela</button>
       </div>
@@ -129,6 +143,16 @@
 </div>
 
 <div class="viz-tooltip" id="tooltip"></div>
+
+<div class="modal-overlay" id="periodModalOverlay">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="periodModalTitle">
+    <div class="modal-header">
+      <h3 id="periodModalTitle">Escolher período</h3>
+      <button class="modal-close" id="periodModalClose" type="button" aria-label="Fechar">✕</button>
+    </div>
+    <div class="modal-body" id="periodModalBody"></div>
+  </div>
+</div>
 
 <script src="script.js"></script>
 </body>

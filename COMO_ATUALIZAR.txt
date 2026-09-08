@@ -1,0 +1,36 @@
+COMO ATUALIZAR O DASHBOARD (sozinho, sem precisar do assistente)
+==================================================================
+
+1) RODAR A ATUALIZACAO
+   Duplo clique em: Atualizar Dashboard.bat  (na raiz do projeto)
+
+   Isso busca as duas fontes (ConsultaJa + Indecx), recalcula os dados
+   e regrava o script.js. Aparece um resumo na tela ao final.
+
+   Alternativa via linha de comando:
+   python pipeline/atualizar_tudo.py
+
+2) CONFERIR O RESUMO
+   - Ver se o numero de respostas/atendimentos mudou como esperado.
+   - Se aparecer "Aviso de sanitizacao" (CPF/e-mail/telefone removido de
+     um comentario), revisar manualmente se quiser confirmar.
+   - Se der "FALHOU" em algum passo, o script.js NAO foi alterado antes
+     do passo 3 -- ver a mensagem de erro impressa.
+
+3) PUBLICAR (sempre manual, de proposito -- nenhum script faz isso sozinho)
+   Abrir terminal na pasta do projeto e rodar, nesta ordem:
+
+   git status
+   git add index.html style.css script.js
+   git commit -m "Atualiza dados do dashboard"
+   git push
+
+   Nunca use "git add -A" ou "git add ." -- sempre a lista explicita
+   acima, pra nao arriscar subir nada sensivel por engano.
+
+O QUE NUNCA E ENVIADO PRO GITHUB (protegido por .gitignore)
+   - pipeline/.env (credenciais/token)
+   - dados-fonte/*.xlsx (planilhas brutas com dado de paciente)
+   - pipeline/atualizacoes.log
+
+Duvidas ou erro que voce nao entender: so chamar o assistente de novo.

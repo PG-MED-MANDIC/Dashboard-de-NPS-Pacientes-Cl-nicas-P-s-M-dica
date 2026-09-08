@@ -15,7 +15,10 @@ let currentUnit = '__all__';
 let currentFbCat = '__all__';
 let currentSearch = '';
 let currentGranularity = 'week';
+let showEngajamentoLine = false;
+let engajamentoViewMode = 'both'; // 'both' | 'only' (só tem efeito quando showEngajamentoLine===true)
 let currentOverviewGranularity = 'all';
+let currentOverviewPeriodKey = null; // null = período mais recente (padrão); setado ao escolher no modal
 /* ---------- helpers ---------- */
 function fmtPct(n){ return (Math.round(n*10)/10).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%'; }
 function fmtNum(n, d=1){ return n.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d}); }
@@ -52,14 +55,23 @@ function computeEngajamento(stats, bounds){
   if(!atendimentos) return null;
   return { pct: stats.total/atendimentos*100, atendimentos };
 }
-/* ---------- "Visão geral": instantâneo do período mais recente (dia/semana/mês/ano) ---------- */
+/* ---------- "Visão geral": instantâneo do período selecionado (dia/semana/mês/ano) ---------- */
+/* Sem escolha explícita no modal (currentOverviewPeriodKey===null), usa o período mais recente
+   (mesmo comportamento de sempre). Com escolha explícita, usa esse período fixo até a granularidade
+   mudar de novo (o clique num chip Dia/Semana/Mês/Ano reseta pra "mais recente"). */
+function currentEffectiveOverviewKey(){
+  if(currentOverviewPeriodKey) return currentOverviewPeriodKey;
+  const recs = filteredRecords();
+  if(!recs.length) return null;
+  const maxDate = recs.reduce((m,r)=> r.data>m ? r.data : m, recs[0].data);
+  return periodKeyAndLabel(new Date(maxDate+'T00:00:00'), currentOverviewGranularity).key;
+}
 function computeOverviewStats(){
   const recs = filteredRecords();
   if(currentOverviewGranularity==='all' || recs.length===0){
     return { records: recs, bounds: globalPeriodBounds() };
   }
-  const maxDate = recs.reduce((m,r)=> r.data>m ? r.data : m, recs[0].data);
-  const {key} = periodKeyAndLabel(new Date(maxDate+'T00:00:00'), currentOverviewGranularity);
+  const key = currentEffectiveOverviewKey();
   const bounds = periodRange(key, currentOverviewGranularity);
   const periodRecs = recs.filter(r => r.data>=bounds.min && r.data<=bounds.max);
   return { records: periodRecs, bounds };
@@ -73,18 +85,98 @@ function overviewPeriodLabel(granularity, bounds){
   const d = new Date(bounds.min+'T00:00:00');
   return `Mostrando: ${d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}`;
 }
+function periodDisplayLabel(key, granularity){
+  return overviewPeriodLabel(granularity, periodRange(key, granularity)).replace(/^Mostrando: /, '');
+}
+/* ---------- seletor de período (modal): dia (últimos 4 corridos) / semana,mês,ano (disponíveis nos dados) ---------- */
+const PERIOD_PICKER_TITLE = { day:'Escolher dia', week:'Escolher semana', month:'Escolher mês', year:'Escolher ano' };
+const PERIOD_PICKER_BTN_LABEL = { day:'Escolher dia', week:'Escolher semana', month:'Escolher mês', year:'Escolher ano' };
+function dayPickerOptions(){
+  const recs = filteredRecords();
+  if(!recs.length) return [];
+  const anchor = recs.reduce((m,r)=> r.data>m ? r.data : m, recs[0].data);
+  const base = new Date(anchor+'T00:00:00');
+  const opts = [];
+  for(let i=0;i<4;i++){
+    const d = new Date(base); d.setDate(base.getDate()-i);
+    const key = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    const count = recs.filter(r=>r.data===key).length;
+    const label = d.toLocaleDateString('pt-BR',{weekday:'short', day:'2-digit', month:'2-digit', year:'numeric'});
+    opts.push({key, count, label: i===0 ? `${label} · mais recente` : label});
+  }
+  return opts;
+}
+function periodPickerOptions(granularity){
+  const recs = filteredRecords();
+  const counts = new Map();
+  recs.forEach(r=>{
+    const d = new Date(r.data+'T00:00:00');
+    const {key} = periodKeyAndLabel(d, granularity);
+    counts.set(key, (counts.get(key)||0)+1);
+  });
+  return Array.from(counts.entries())
+    .map(([key,count])=>({key, count, label: periodDisplayLabel(key, granularity)}))
+    .sort((a,b)=> b.key.localeCompare(a.key));
+}
+function periodPickerOptionsFor(granularity){
+  return granularity==='day' ? dayPickerOptions() : periodPickerOptions(granularity);
+}
+function renderPeriodModalBody(){
+  const g = currentOverviewGranularity;
+  const body = document.getElementById('periodModalBody');
+  const opts = periodPickerOptionsFor(g);
+  const activeKey = currentEffectiveOverviewKey();
+  body.innerHTML = '';
+  if(!opts.length){
+    body.innerHTML = '<div class="modal-empty">Nenhuma resposta de NPS disponível para esta unidade.</div>';
+    return;
+  }
+  opts.forEach(opt=>{
+    const row = document.createElement('div');
+    row.className = 'period-option' + (opt.key===activeKey ? ' active' : '');
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = opt.label;
+    const countSpan = document.createElement('span');
+    countSpan.className = 'period-option-count' + (opt.count===0 ? ' period-option-empty' : '');
+    countSpan.textContent = opt.count===0 ? 'sem resposta' : `${opt.count} resposta${opt.count===1?'':'s'}`;
+    row.appendChild(labelSpan); row.appendChild(countSpan);
+    row.addEventListener('click', ()=>{
+      currentOverviewPeriodKey = opt.key;
+      closePeriodPicker();
+      renderOverview();
+    });
+    body.appendChild(row);
+  });
+}
+function openPeriodPicker(){
+  if(currentOverviewGranularity==='all') return;
+  document.getElementById('periodModalTitle').textContent = PERIOD_PICKER_TITLE[currentOverviewGranularity] || 'Escolher período';
+  renderPeriodModalBody();
+  document.getElementById('periodModalOverlay').classList.add('show');
+}
+function closePeriodPicker(){
+  document.getElementById('periodModalOverlay').classList.remove('show');
+}
 /* ---------- unit select population ---------- */
 function populateUnitFilter(){
-  const sel = document.getElementById('unitFilter');
+  // dois selects (filtro global no topo + atalho na seção "Evolução ao longo do tempo"),
+  // sempre sincronizados -- é o mesmo currentUnit por trás dos dois, não um filtro à parte.
+  const selects = [document.getElementById('unitFilter'), document.getElementById('timeUnitFilter')].filter(Boolean);
   const counts = {};
   RECORDS.forEach(r=>{ counts[r.unidade] = (counts[r.unidade]||0)+1; });
   const units = Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
-  units.forEach(u=>{
-    const opt = document.createElement('option');
-    opt.value = u; opt.textContent = `${u} (${counts[u]})`;
-    sel.appendChild(opt);
+  selects.forEach(sel=>{
+    units.forEach(u=>{
+      const opt = document.createElement('option');
+      opt.value = u; opt.textContent = `${u} (${counts[u]})`;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', ()=>{
+      currentUnit = sel.value;
+      selects.forEach(other=>{ if(other!==sel) other.value = currentUnit; });
+      renderAll();
+    });
   });
-  sel.addEventListener('change', ()=>{ currentUnit = sel.value; renderAll(); });
 }
 /* ---------- tooltip ---------- */
 const tooltipEl = document.getElementById('tooltip');
@@ -116,7 +208,7 @@ function renderKpis(stats, eng){
     {label:'Nota média', value: fmtNum(stats.avg,2), sub:'escala 0–10', cls:''},
     {label:'Promotores', value: fmtPct(stats.total?stats.promotores/stats.total*100:0), sub:`${stats.promotores} respostas (nota 9–10)`, cls:'good'},
     {label:'Detratores', value: fmtPct(stats.total?stats.detratores/stats.total*100:0), sub:`${stats.detratores} respostas (nota 0–6)`, cls:'critical'},
-    {label:'Engajamento', value: eng ? fmtPct(eng.pct) : '—', sub: eng ? `${stats.total} de ${eng.atendimentos.toLocaleString('pt-BR')} atendimentos` : 'Sem dados de atendimento no período', cls:''},
+    {label:'Engajamento', value: eng ? fmtPct(eng.pct) : '—', sub: eng ? `${stats.total} de ${eng.atendimentos.toLocaleString('pt-BR')} atendimentos · ${Math.max(0, eng.atendimentos-stats.total).toLocaleString('pt-BR')} sem resposta` : 'Sem dados de atendimento no período', cls:''},
   ];
   items.forEach(it=>{
     const div = document.createElement('div');
@@ -131,7 +223,19 @@ function renderOverview(){
   const eng = computeEngajamento(stats, bounds);
   renderKpis(stats, eng);
   const labelEl = document.getElementById('overviewPeriodLabel');
-  if(labelEl) labelEl.textContent = overviewPeriodLabel(currentOverviewGranularity, bounds);
+  if(labelEl){
+    let label = overviewPeriodLabel(currentOverviewGranularity, bounds);
+    if(currentOverviewGranularity!=='all' && bounds && records.length===0){
+      label += ' — sem resposta de NPS neste período';
+    }
+    labelEl.textContent = label;
+  }
+  const pickBtn = document.getElementById('periodPickBtn');
+  if(pickBtn){
+    const isAll = currentOverviewGranularity==='all';
+    pickBtn.style.display = isAll ? 'none' : 'inline-flex';
+    if(!isAll) pickBtn.textContent = (PERIOD_PICKER_BTN_LABEL[currentOverviewGranularity] || 'Escolher período') + ' ▾';
+  }
 }
 /* ---------- donut: categoria NPS ---------- */
 function renderDonut(records){
@@ -237,7 +341,80 @@ function renderTimeChart(data, granularity){
   const host = document.getElementById('weekChart');
   host.innerHTML = '';
   if(data.length===0){ host.innerHTML='<div class="fb-empty">Sem dados suficientes para este filtro.</div>'; return; }
-  const W=1040,H=260, padL=44, padR=20, padT=20, padB=34;
+  const engActive = showEngajamentoLine;
+  const onlyEng = engActive && engajamentoViewMode==='only';
+  const engData = engActive ? engajamentoSeriesFor(data, granularity) : null;
+  const maxTotalAll = Math.max(...data.map(w=>w.total));
+
+  if(onlyEng){
+    /* ---------- modo "só Engajamento": usa o eixo principal (esquerda) pro % ---------- */
+    const W=1040,H=260, padL=44, padR=20, padT=20, padB=34;
+    const plotW=W-padL-padR, plotH=H-padT-padB;
+    const xStep = data.length>1 ? plotW/(data.length-1) : 0;
+    const engVals = engData.map(p=>p.pct).filter(v=>v!==null);
+    const maxEng = engVals.length ? (Math.max(...engVals)*1.15 || 1) : 1;
+    function xy(i,val){
+      const x = padL + (data.length>1 ? i*xStep : plotW/2);
+      const y = padT + plotH*(1-val/maxEng);
+      return [x,y];
+    }
+    const svg = svgEl('svg',{viewBox:`0 0 ${W} ${H}`, width:'100%', height:260, role:'img', 'aria-label':'Evolução do Engajamento'});
+    [0, maxEng/2, maxEng].forEach(v=>{
+      const [,y] = xy(0,v);
+      svg.appendChild(svgEl('line',{x1:padL,x2:W-padR,y1:y,y2:y,stroke:cv('--gridline'),'stroke-width':1}));
+      const t = svgEl('text',{x:padL-8,y:y+3,'text-anchor':'end','font-family':'var(--font-mono)','font-size':'10',fill:cv('--text-muted')});
+      t.textContent = fmtPct(v);
+      svg.appendChild(t);
+    });
+    let dEng='', drawing=false;
+    engData.forEach((p,i)=>{
+      if(p.pct===null){ drawing=false; return; }
+      const [x,y] = xy(i,p.pct);
+      dEng += (drawing?'L':'M') + x + ',' + y + ' ';
+      drawing = true;
+    });
+    svg.appendChild(svgEl('path',{d:dEng, fill:'none', stroke:cv('--gold-deep'), 'stroke-width':2, 'stroke-linejoin':'round','stroke-linecap':'round'}));
+    engData.forEach((p,i)=>{
+      if(p.pct===null) return;
+      const [x,y] = xy(i,p.pct);
+      const r = 4 + (p.total/maxTotalAll)*7;
+      const g = svgEl('g',{});
+      const ring = svgEl('circle',{cx:x,cy:y,r:r+2, fill:cv('--surface')});
+      const dot = svgEl('circle',{cx:x,cy:y,r:r, fill:cv('--gold-deep')});
+      const hit = svgEl('circle',{cx:x,cy:y,r:16, fill:'transparent', style:'cursor:pointer'});
+      hit.addEventListener('pointermove',(e)=>{
+        showTooltip(e.clientX,e.clientY, `<div class="tt-title">${meta.tooltipPrefix} ${p.label}</div><div class="tt-row"><span class="tt-key" style="background:${cv('--gold-deep')}"></span>Engajamento<span class="tt-val">${fmtPct(p.pct)}</span></div><div class="tt-row" style="margin-top:2px;color:rgba(255,255,255,.6)">${p.total} de ${p.atendimentos.toLocaleString('pt-BR')} atendimentos</div>`);
+      });
+      hit.addEventListener('pointerleave', hideTooltip);
+      g.appendChild(ring); g.appendChild(dot); g.appendChild(hit);
+      svg.appendChild(g);
+      if(i===engData.length-1){
+        // se não houver espaço acima (ponto perto do topo do gráfico), desenha abaixo em vez de cortar
+        const labelY = (y-r-8>=12) ? y-r-8 : y+r+14;
+        const lbl = svgEl('text',{x:x, y:labelY, 'text-anchor':'end','font-family':'var(--font-mono)','font-weight':'600','font-size':'11', fill:cv('--text-primary')});
+        lbl.textContent = fmtPct(p.pct);
+        svg.appendChild(lbl);
+      }
+    });
+    const labelEvery = Math.ceil(data.length/8);
+    data.forEach((w,i)=>{
+      if(i%labelEvery!==0 && i!==data.length-1) return;
+      const [x] = xy(i,0);
+      const t = svgEl('text',{x, y:H-8, 'text-anchor':'middle','font-family':'var(--font-mono)','font-size':'10', fill:cv('--text-muted')});
+      t.textContent = w.label;
+      svg.appendChild(t);
+    });
+    host.appendChild(svg);
+    const legend = document.createElement('div');
+    legend.className='legend';
+    legend.innerHTML = `<div class="legend-item"><span class="legend-swatch" style="background:${cv('--gold-deep')};border-radius:50%"></span>Engajamento <b>·</b> tamanho do ponto = volume de respostas de NPS · buraco = sem atendimento no período</div>`;
+    host.appendChild(legend);
+    renderTable('weekTable', [meta.noun, 'Respostas', 'Atendimentos', 'Engajamento'],
+      engData.slice().reverse().map(p=>[p.label, p.total, p.atendimentos.toLocaleString('pt-BR'), p.pct===null?'—':fmtPct(p.pct)]));
+    return;
+  }
+
+  const W=1040,H=260, padL=44, padR=engActive?46:20, padT=20, padB=34;
   const plotW=W-padL-padR, plotH=H-padT-padB;
   const minNps = Math.min(0, ...data.map(w=>w.nps));
   const maxNps = Math.max(100, ...data.map(w=>w.nps));
@@ -285,7 +462,9 @@ function renderTimeChart(data, granularity){
     g.appendChild(ring); g.appendChild(dot); g.appendChild(hit);
     svg.appendChild(g);
     if(i===data.length-1){
-      const lbl = svgEl('text',{x:x, y:y-r-8, 'text-anchor':'end','font-family':'var(--font-mono)','font-weight':'600','font-size':'11', fill:cv('--text-primary')});
+      // se não houver espaço acima (ponto perto do topo do gráfico -- ex.: NPS +100), desenha abaixo em vez de cortar
+      const labelY = (y-r-8>=12) ? y-r-8 : y+r+14;
+      const lbl = svgEl('text',{x:x, y:labelY, 'text-anchor':'end','font-family':'var(--font-mono)','font-weight':'600','font-size':'11', fill:cv('--text-primary')});
       lbl.textContent = fmtSigned(w.nps,1);
       svg.appendChild(lbl);
     }
@@ -299,22 +478,65 @@ function renderTimeChart(data, granularity){
     t.textContent = w.label;
     svg.appendChild(t);
   });
+  // segunda linha opcional: Engajamento (eixo próprio à direita, buraco quando não há atendimento no período)
+  if(engData){
+    const engVals = engData.map(p=>p.pct).filter(v=>v!==null);
+    const maxEng = engVals.length ? Math.max(...engVals)*1.15 || 1 : 1;
+    function xyEng(i,val){
+      const x = padL + (data.length>1 ? i*xStep : plotW/2);
+      const y = padT + plotH*(1-val/maxEng);
+      return [x,y];
+    }
+    // eixo direito: gridlines/labels em 0 e no topo
+    [0, maxEng].forEach(v=>{
+      const [,y] = xyEng(0,v);
+      const t = svgEl('text',{x:W-padR+8,y:y+3,'text-anchor':'start','font-family':'var(--font-mono)','font-size':'10',fill:cv('--gold-deep')});
+      t.textContent = fmtPct(v);
+      svg.appendChild(t);
+    });
+    let dEng = '', drawing = false;
+    engData.forEach((p,i)=>{
+      if(p.pct===null){ drawing=false; return; }
+      const [x,y] = xyEng(i,p.pct);
+      dEng += (drawing?'L':'M') + x + ',' + y + ' ';
+      drawing = true;
+    });
+    svg.appendChild(svgEl('path',{d:dEng, fill:'none', stroke:cv('--gold-deep'), 'stroke-width':2, 'stroke-dasharray':'5 3', 'stroke-linejoin':'round','stroke-linecap':'round'}));
+    engData.forEach((p,i)=>{
+      if(p.pct===null) return;
+      const [x,y] = xyEng(i,p.pct);
+      const dot = svgEl('circle',{cx:x,cy:y,r:4, fill:cv('--gold-deep')});
+      const hit = svgEl('circle',{cx:x,cy:y,r:14, fill:'transparent', style:'cursor:pointer'});
+      hit.addEventListener('pointermove',(e)=>{
+        showTooltip(e.clientX,e.clientY, `<div class="tt-title">${meta.tooltipPrefix} ${p.label}</div><div class="tt-row"><span class="tt-key" style="background:${cv('--gold-deep')}"></span>Engajamento<span class="tt-val">${fmtPct(p.pct)}</span></div><div class="tt-row" style="margin-top:2px;color:rgba(255,255,255,.6)">${p.total} de ${p.atendimentos.toLocaleString('pt-BR')} atendimentos</div>`);
+      });
+      hit.addEventListener('pointerleave', hideTooltip);
+      svg.appendChild(dot); svg.appendChild(hit);
+    });
+  }
   host.appendChild(svg);
   const legend = document.createElement('div');
   legend.className='legend';
-  legend.innerHTML = `<div class="legend-item"><span class="legend-swatch" style="background:${cv('--navy')};border-radius:50%"></span>${meta.legend} <b>·</b> tamanho do ponto = volume de respostas</div>`;
+  legend.innerHTML = `<div class="legend-item"><span class="legend-swatch" style="background:${cv('--navy')};border-radius:50%"></span>${meta.legend} <b>·</b> tamanho do ponto = volume de respostas</div>`
+    + (engData ? `<div class="legend-item"><span class="legend-swatch" style="background:${cv('--gold-deep')};border-radius:50%"></span>Engajamento (eixo direito) <b>·</b> linha tracejada, com buraco onde não há atendimento no período</div>` : '');
   host.appendChild(legend);
   renderTable('weekTable', [meta.noun, 'Respostas', 'NPS', 'Nota média'],
     data.slice().reverse().map(w=>[w.label, w.total, fmtSigned(w.nps,1), fmtNum(w.avg,2)]));
 }
 /* ---------- bar: NPS by unit ---------- */
+function measureTextWidth(text, font){
+  measureTextWidth._ctx = measureTextWidth._ctx || document.createElement('canvas').getContext('2d');
+  measureTextWidth._ctx.font = font;
+  return measureTextWidth._ctx.measureText(text).width;
+}
 function renderUnitChart(records){
   const host = document.getElementById('unitChart');
   host.innerHTML = '';
   const byUnit = {};
   records.forEach(r=>{
-    byUnit[r.unidade] = byUnit[r.unidade] || [];
-    byUnit[r.unidade].push(r);
+    const key = r.unidade || '(sem unidade)';
+    byUnit[key] = byUnit[key] || [];
+    byUnit[key].push(r);
   });
   const units = Object.keys(byUnit).sort((a,b)=>byUnit[b].length-byUnit[a].length);
   if(units.length===0){ host.innerHTML='<div class="fb-empty">Sem dados.</div>'; return; }
@@ -323,7 +545,11 @@ function renderUnitChart(records){
     const s = computeStats(recs);
     return {unidade:u, ...s};
   });
-  const W=560, rowH=40, padL=140, padR=96, padT=8;
+  const W=560, rowH=40, padR=96, padT=8;
+  // padL calculado a partir do nome de unidade mais longo -- evita cortar labels como
+  // "QUINTAL SLM - CONSOLAÇÃO" quando o nome mudar/ficar maior no futuro.
+  const maxLabelWidth = Math.max(...rows.map(r => measureTextWidth(r.unidade, '12px Inter, system-ui, sans-serif')));
+  const padL = Math.max(90, Math.ceil(maxLabelWidth) + 24);
   const H = padT + rows.length*rowH + 10;
   const plotW = W-padL-padR;
   const minV = Math.min(0, ...rows.map(r=>r.nps));
@@ -487,14 +713,54 @@ document.querySelectorAll('#timeGranularity .fb-chip').forEach(chip=>{
     renderTimeChart(periodForUnit(currentGranularity), currentGranularity);
   });
 });
+document.getElementById('engajamentoToggle').addEventListener('click', function(){
+  showEngajamentoLine = !showEngajamentoLine;
+  this.classList.toggle('active', showEngajamentoLine);
+  renderTimeChart(periodForUnit(currentGranularity), currentGranularity);
+});
+document.getElementById('engajamentoModeBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  const menu = document.getElementById('engajamentoModeMenu');
+  const opening = menu.hidden;
+  if(opening){
+    document.querySelectorAll('#engajamentoModeMenu .period-option').forEach(el=>{
+      el.classList.toggle('active', el.dataset.mode===engajamentoViewMode);
+    });
+  }
+  menu.hidden = !opening;
+});
+document.querySelectorAll('#engajamentoModeMenu .period-option').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    engajamentoViewMode = el.dataset.mode;
+    showEngajamentoLine = true;
+    document.getElementById('engajamentoToggle').classList.add('active');
+    document.getElementById('engajamentoModeMenu').hidden = true;
+    renderTimeChart(periodForUnit(currentGranularity), currentGranularity);
+  });
+});
+document.addEventListener('click', (e)=>{
+  const menu = document.getElementById('engajamentoModeMenu');
+  if(!menu.hidden && !menu.contains(e.target) && e.target.id!=='engajamentoModeBtn'){
+    menu.hidden = true;
+  }
+});
 /* ---------- overview (Visão geral) granularity controls ---------- */
 document.querySelectorAll('#overviewGranularity .fb-chip').forEach(chip=>{
   chip.addEventListener('click', ()=>{
     document.querySelectorAll('#overviewGranularity .fb-chip').forEach(c=>c.classList.remove('active'));
     chip.classList.add('active');
     currentOverviewGranularity = chip.dataset.granularity;
+    currentOverviewPeriodKey = null; // trocar de granularidade sempre volta pro período mais recente
     renderOverview();
   });
+});
+document.getElementById('periodPickBtn').addEventListener('click', openPeriodPicker);
+document.getElementById('periodModalClose').addEventListener('click', closePeriodPicker);
+document.getElementById('periodModalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id==='periodModalOverlay') closePeriodPicker();
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Escape') closePeriodPicker();
 });
 document.getElementById('fbSearch').addEventListener('input', (e)=>{
   currentSearch = e.target.value;
@@ -565,6 +831,26 @@ function aggregateByPeriod(records, granularity){
 function periodForUnit(granularity){
   if(granularity==='week' && currentUnit==='__all__') return WEEKLY;
   return aggregateByPeriod(filteredRecords(), granularity);
+}
+/* ---------- engajamento por período (segunda linha opcional no gráfico de evolução) ---------- */
+function atendimentosByPeriodMap(granularity){
+  const filtered = ATENDIMENTOS.filter(a => currentUnit==='__all__' || a.unidade===currentUnit);
+  const map = {};
+  filtered.forEach(a=>{
+    const d = new Date(a.data+'T00:00:00');
+    const {key} = periodKeyAndLabel(d, granularity);
+    map[key] = (map[key]||0) + a.atendimentos;
+  });
+  return map;
+}
+function engajamentoSeriesFor(data, granularity){
+  const atendMap = atendimentosByPeriodMap(granularity);
+  return data.map(p=>{
+    const key = p.period || p.week;
+    const atendimentos = atendMap[key] || 0;
+    const pct = atendimentos ? (p.total/atendimentos*100) : null; // null = sem atendimento nesse período (buraco na linha)
+    return { label:p.label, total:p.total, atendimentos, pct };
+  });
 }
 /* ---------- period meta (derived from data, no manual sync needed) ---------- */
 function renderPeriodMeta(){
