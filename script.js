@@ -197,6 +197,16 @@ function svgEl(tag, attrs){
   for(const k in attrs) el.setAttribute(k, attrs[k]);
   return el;
 }
+// label de 2 linhas (número em cima, "respostas" embaixo) ancorado longe do ponto/linha para não perder leitura
+function drawCountLabel(svg, x, y, r, total, color, preferAbove){
+  const lineHeight = 10, gap = 6;
+  const y1 = preferAbove ? y - r - gap - lineHeight : y + r + gap + lineHeight;
+  const y2 = preferAbove ? y - r - gap : y1 + lineHeight;
+  const lbl = svgEl('text',{x, y:y1, 'text-anchor':'end','font-family':'var(--font-mono)','font-size':'9', fill:color});
+  lbl.appendChild(Object.assign(svgEl('tspan',{x,y:y1}), {textContent:String(total)}));
+  lbl.appendChild(Object.assign(svgEl('tspan',{x,y:y2}), {textContent:'respostas'}));
+  svg.appendChild(lbl);
+}
 /* ---------- KPI row ---------- */
 function renderKpis(stats, eng){
   const row = document.getElementById('kpiRow');
@@ -208,7 +218,7 @@ function renderKpis(stats, eng){
     {label:'Nota média', value: fmtNum(stats.avg,2), sub:'escala 0–10', cls:''},
     {label:'Promotores', value: fmtPct(stats.total?stats.promotores/stats.total*100:0), sub:`${stats.promotores} respostas (nota 9–10)`, cls:'good'},
     {label:'Detratores', value: fmtPct(stats.total?stats.detratores/stats.total*100:0), sub:`${stats.detratores} respostas (nota 0–6)`, cls:'critical'},
-    {label:'Engajamento', value: eng ? fmtPct(eng.pct) : '—', sub: eng ? `${stats.total} de ${eng.atendimentos.toLocaleString('pt-BR')} atendimentos · ${Math.max(0, eng.atendimentos-stats.total).toLocaleString('pt-BR')} sem resposta` : 'Sem dados de atendimento no período', cls:''},
+    {label:'Engajamento', value: eng ? fmtPct(eng.pct) : '—', sub: eng ? `${stats.total} de ${eng.atendimentos.toLocaleString('pt-BR')} atendimentos` : 'Sem dados de atendimento no período', cls:''},
   ];
   items.forEach(it=>{
     const div = document.createElement('div');
@@ -390,10 +400,8 @@ function renderTimeChart(data, granularity){
       svg.appendChild(g);
       if(i===engData.length-1){
         // se não houver espaço acima (ponto perto do topo do gráfico), desenha abaixo em vez de cortar
-        const labelY = (y-r-8>=12) ? y-r-8 : y+r+14;
-        const lbl = svgEl('text',{x:x, y:labelY, 'text-anchor':'end','font-family':'var(--font-mono)','font-weight':'600','font-size':'11', fill:cv('--text-primary')});
-        lbl.textContent = fmtPct(p.pct);
-        svg.appendChild(lbl);
+        const preferAbove = (y-r-6-20>=4);
+        drawCountLabel(svg, x, y, r, p.total, cv('--text-primary'), preferAbove);
       }
     });
     const labelEvery = Math.ceil(data.length/8);
@@ -487,10 +495,10 @@ function renderTimeChart(data, granularity){
       const y = padT + plotH*(1-val/maxEng);
       return [x,y];
     }
-    // eixo direito: gridlines/labels em 0 e no topo
+    // eixo direito: gridlines/labels em 0 e no topo (cor neutra -- não é um valor de ponto, é só a escala)
     [0, maxEng].forEach(v=>{
       const [,y] = xyEng(0,v);
-      const t = svgEl('text',{x:W-padR+8,y:y+3,'text-anchor':'start','font-family':'var(--font-mono)','font-size':'10',fill:cv('--gold-deep')});
+      const t = svgEl('text',{x:W-padR+8,y:y+3,'text-anchor':'start','font-family':'var(--font-mono)','font-size':'10',fill:cv('--text-muted')});
       t.textContent = fmtPct(v);
       svg.appendChild(t);
     });
@@ -512,6 +520,12 @@ function renderTimeChart(data, granularity){
       });
       hit.addEventListener('pointerleave', hideTooltip);
       svg.appendChild(dot); svg.appendChild(hit);
+      if(i===engData.length-1){
+        // prefere desenhar abaixo do ponto; se não houver espaço (perto da base do gráfico), desenha acima
+        const r2 = 4;
+        const preferAbove = !(y+r2+6+20<=H-padB);
+        drawCountLabel(svg, x, y, r2, p.total, cv('--gold-deep'), preferAbove);
+      }
     });
   }
   host.appendChild(svg);
