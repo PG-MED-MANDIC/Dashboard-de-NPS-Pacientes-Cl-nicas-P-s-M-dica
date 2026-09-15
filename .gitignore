@@ -16,3 +16,14 @@ pipeline/atualizacoes.log
 # dados-fonte/*.xlsx (dado bruto de paciente) já é ignorado pelo
 # dados-fonte/.gitignore próprio -- não duplicar aqui.
 # pipeline/__pycache__ e *.pyc já são ignorados por pipeline/.gitignore.
+
+# Outros dashboards, cada um com seu próprio .git/remoto -- vivem juntos
+# nesta pasta só por conveniência de workspace (ver CONTEXTO-GITHUB.md),
+# nunca fazem parte deste repositório (Dashboard-de-NPS-Pacientes).
+/agendas-pac-real/
+/agendas_pgmed/
+/csat/
+
+# Nota de workspace multi-repositório -- só referência local, não versionada
+# (mesma convenção do CONTEXTO-GITHUB.md antigo, em troca-github/).
+/CONTEXTO-GITHUB.md

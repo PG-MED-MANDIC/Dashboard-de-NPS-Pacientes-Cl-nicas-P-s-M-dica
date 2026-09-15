@@ -3,13 +3,13 @@ dados-fonte/) e agrega em contagem de atendimentos por dia + unidade. Isso
 vira o denominador do card "Engajamento": respostas de NPS / atendimentos
 no mesmo período e unidade.
 
-Regra confirmada com o time (atualizada em 04/09/2026): "atendimento" =
-Status "Compareceu". "Atendido" era a nomenclatura antiga -- parou de ser
-usada em ago/2025 (confirmado nos dados: nenhum registro com esse status
-depois dessa data) -- então foi removida da contagem para refletir só a
-nomenclatura atual. Os demais status (Cancelado, Faltou, Agendado,
-Confirmado) não contam -- não houve, ou ainda não houve, a visita que gera
-a pesquisa.
+Regra confirmada com o time (atualizada em 08/09/2026): "atendimento" =
+Status "Compareceu" OU "Atendido". "Atendido" é a nomenclatura antiga --
+parou de ser usada em ago/2025 -- mas os registros com esse status são
+visitas que realmente aconteceram, então contam também: contar só
+"Compareceu" descartava esse histórico antigo (dados de antes de ago/2025).
+Os demais status (Cancelado, Faltou, Agendado, Confirmado) não contam --
+não houve, ou ainda não houve, a visita que gera a pesquisa.
 
 Só as colunas Data/Status/Unidade são lidas -- Paciente/Celular/Profissional
 nunca entram no agregado, então não há dado identificável de paciente no
@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pandas as pd
 
-ATTENDED_STATUSES = {"Compareceu"}
+ATTENDED_STATUSES = {"Compareceu", "Atendido"}
 
 # Nome da unidade na base de agendamentos -> nome usado no dashboard de NPS.
 # Confirmado com o time: "São Paulo" (agendamentos) = "CONSOLAÇÃO" (NPS).

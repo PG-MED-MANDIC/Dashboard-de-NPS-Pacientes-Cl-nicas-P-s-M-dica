@@ -6,6 +6,14 @@ falhou, se falhou. Pensado pra rodar com um único comando, sem precisar de
 
     python pipeline/atualizar_tudo.py
 
+Antes de chamar a API da ConsultaJá, reaproveita a planilha do dia se ela
+já tiver sido baixada -- por este pipeline ou pelo pipeline do
+agendas-pac-real (repositório vizinho dentro desta mesma pasta, mesma
+dados-fonte/ compartilhada) -- assim as duas atualizações não baixam a
+mesma base duas vezes. Se quiser forçar um download novo, apague a
+planilha do dia em dados-fonte/ antes de rodar. (A busca do Indecx não tem
+esse compartilhamento -- é uma base própria deste dashboard.)
+
 Só roda quando alguém chama -- nada aqui é agendado. Não faz git add/commit/
 push: isso continua manual de propósito (ver README.md > "Atualizar os
 dados e publicar") -- é a checagem antes de qualquer coisa sair da máquina.
@@ -17,11 +25,12 @@ from __future__ import annotations
 
 import sys
 import traceback
-from datetime import datetime
+from datetime import date, datetime
+from pathlib import Path
 
 from attendance import load_attendance
 from attendance import to_records as attendance_to_records
-from config import PIPELINE_DIR, SCRIPT_JS_PATH
+from config import DADOS_FONTE_DIR, PIPELINE_DIR, SCRIPT_JS_PATH
 from consultaja_client import ConsultaJaConfigurationError
 from fetch_consultaja import fetch_and_save as fetch_consultaja
 from fetch_indecx import fetch_and_save as fetch_indecx
@@ -41,25 +50,42 @@ def _log(lines: list[str]) -> None:
         f.write(text)
 
 
-def _atualizar_atendimentos(report: list[str]) -> bool:
-    report.append("PASSO 1/4 -- buscar agendamentos na API da ConsultaJá")
-    try:
-        output_path = fetch_consultaja()
-    except ConsultaJaConfigurationError as e:
-        report.append(f"  FALHOU: {e}")
-        return False
-    except RuntimeError as e:
-        report.append(f"  FALHOU: {e}")
-        return False
-    except Exception:
-        report.append("  FALHOU: erro inesperado ao buscar na API. Detalhes:")
-        report.append(traceback.format_exc())
-        return False
+def _planilha_consultaja_de_hoje() -> Path | None:
+    path = DADOS_FONTE_DIR / f"Base_Consulta_Ja{date.today():%y_%m_%d}.xlsx"
+    return path if path.exists() else None
 
-    if output_path is None:
-        report.append("  Nenhum agendamento novo encontrado -- ATENDIMENTOS não foi alterado.")
-        return True
-    report.append(f"  OK -- planilha salva em {output_path.relative_to(PIPELINE_DIR.parent)}")
+
+def _atualizar_atendimentos(report: list[str]) -> bool:
+    report.append("PASSO 1/4 -- obter a base de agendamentos da ConsultaJá")
+    existing = _planilha_consultaja_de_hoje()
+    if existing is not None:
+        output_path = existing
+        report.append(
+            f"  Reaproveitando planilha já baixada hoje: "
+            f"{output_path.relative_to(PIPELINE_DIR.parent)} "
+            "(evita baixar a mesma base de novo)."
+        )
+    else:
+        try:
+            output_path = fetch_consultaja()
+        except ConsultaJaConfigurationError as e:
+            report.append(f"  FALHOU: {e}")
+            return False
+        except RuntimeError as e:
+            report.append(f"  FALHOU: {e}")
+            return False
+        except Exception:
+            report.append("  FALHOU: erro inesperado ao buscar na API. Detalhes:")
+            report.append(traceback.format_exc())
+            return False
+
+        if output_path is None:
+            report.append("  Nenhum agendamento novo encontrado -- ATENDIMENTOS não foi alterado.")
+            return True
+        report.append(
+            f"  OK -- planilha salva em {output_path.relative_to(PIPELINE_DIR.parent)} "
+            "(compartilhada com o pipeline do agendas-pac-real)."
+        )
 
     report.append("\nPASSO 2/4 -- recalcular ATENDIMENTOS")
     try:

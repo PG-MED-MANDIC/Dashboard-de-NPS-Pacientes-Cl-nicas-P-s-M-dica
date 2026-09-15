@@ -24,8 +24,9 @@ hoje (04/09/2026). Falta só ativar o GitHub Pages (ver seção "Hospedagem" aba
 - **Bug do Engajamento corrigido (04/09/2026)**: ver "Decisões de negócio confirmadas" e commits `9e7b974` /
   `061ef4a`. Resumo: nome de unidade estava desatualizado (Indecx passou a exportar com prefixo "QUINTAL SLM -")
   e a regra de status foi simplificada pra só `Compareceu`.
-- **Dados atuais em `script.js`** (gravados em 04/09/2026): 144 respostas de NPS → 13 semanas; `ATENDIMENTOS`
-  com 624 combinações dia+unidade, 19.311 atendimentos (`Compareceu`, só as 3 unidades físicas, sem "Online").
+- **Dados atuais em `script.js`** (gravados em 08/09/2026): 144 respostas de NPS → 13 semanas; `ATENDIMENTOS`
+  com 750 combinações dia+unidade, 23.042 atendimentos (`Compareceu` + `Atendido`, só as 3 unidades físicas, sem
+  "Online").
   Aviso de sanitização de um CPF digitado por engano num comentário (unidade QUINTAL SLM - BRASÍLIA, 06/08/2026)
   removido automaticamente pelo `sanitize.py` -- confirmado que só `[removido]` entrou no arquivo.
 - **29 das 144 respostas de NPS vêm com `unidade` em branco** (dado assim na origem, não é bug do pipeline) --
@@ -121,7 +122,8 @@ Todos partem do mesmo conjunto de respostas: primeiro filtra por unidade (`filte
 - **Nota média** = média do campo `nota` (0–10).
 - **Promotores / Detratores** = % de respostas com `categoria` = `promotor` / `detrator` (nota 9–10 = promotor, 7–8 = passivo, 0–6 = detrator).
 - **NPS Score** = % promotores − % detratores.
-- **Engajamento** = respostas de NPS ÷ atendimentos (`ATENDIMENTOS`, filtrado por `Status` = `Compareceu`) no
+- **Engajamento** = respostas de NPS ÷ atendimentos (`ATENDIMENTOS`, filtrado por `Status` = `Compareceu` ou
+  `Atendido`) no
   **mesmo período e unidade**. O texto do card é sempre "[respostas de NPS] de [atendimentos]" -- não inverter
   a leitura (ex.: "6 de 164" = 6 respostas de NPS de um total de 164 atendimentos, não "6 atendimentos").
   No modo "Tudo" o período é o intervalo coberto por todas as respostas de NPS carregadas (`globalPeriodBounds()`,
@@ -134,11 +136,12 @@ Todos partem do mesmo conjunto de respostas: primeiro filtra por unidade (`filte
 
 ## Decisões de negócio confirmadas
 
-- **Engajamento -- status (atualizado 04/09/2026)**: atendimento = `Status` **só** `Compareceu`. `Atendido` era
-  a nomenclatura antiga -- confirmado nos dados que parou de ser usada em ago/2025 (ex.: Campinas, `Atendido`
-  vai só até 23/08/2025; `Compareceu` cobre de 09/01/2025 até hoje). Contar os dois juntos (regra anterior) não
-  quebrava nada tecnicamente, mas o usuário preferiu simplificar pra só a nomenclatura atual. Demais status
-  (Cancelado, Faltou, Agendado, Confirmado) não contam.
+- **Engajamento -- status (revertido 08/09/2026)**: atendimento = `Status` `Compareceu` **ou** `Atendido`.
+  `Atendido` é a nomenclatura antiga -- parou de ser usada em ago/2025 (ex.: Campinas, `Atendido` vai só até
+  23/08/2025; `Compareceu` cobre de 09/01/2025 até hoje) -- mas são visitas que realmente aconteceram, então
+  contam também. No dia 04/09/2026 tinha sido simplificado pra só `Compareceu`; revertido porque isso descartava
+  o histórico de atendimentos de antes de ago/2025. Demais status (Cancelado, Faltou, Agendado, Confirmado) não
+  contam.
 - **Mapeamento de unidade (corrigido 04/09/2026)**: `São Paulo` (ConsultaJá) = `QUINTAL SLM - CONSOLAÇÃO` (NPS),
   `Campinas` = `QUINTAL SLM - CAMPINAS`, `Brasília` = `QUINTAL SLM - BRASÍLIA` -- ver `pipeline/attendance.py:
   UNIT_MAP`. **Bug histórico**: até 04/09/2026 o mapa apontava pro nome sem o prefixo "QUINTAL SLM -" (ex.: só
