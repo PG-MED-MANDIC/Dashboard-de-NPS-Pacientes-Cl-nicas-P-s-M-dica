@@ -27,3 +27,7 @@ pipeline/atualizacoes.log
 # Nota de workspace multi-repositório -- só referência local, não versionada
 # (mesma convenção do CONTEXTO-GITHUB.md antigo, em troca-github/).
 /CONTEXTO-GITHUB.md
+
+# Nota de comparação com a conta antiga (TCM-18) -- rascunho de validação
+# interna, não faz parte do dashboard nem deve ir pro repositório público.
+/COMPARACAO_TCM18.txt

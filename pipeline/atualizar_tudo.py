@@ -142,6 +142,7 @@ def main() -> int:
     ok_nps = _atualizar_nps(report)
 
     if ok_atendimentos and ok_nps:
+        upsert_const(SCRIPT_JS_PATH, "DASHBOARD_UPDATED_AT", f"{datetime.now():%d/%m/%Y %H:%M}")
         report.append(
             "\nTudo certo. Próximos passos (ver README.md > \"Atualizar os dados e publicar\"):\n"
             "  git status\n"
