@@ -1,34 +1,52 @@
 # Progresso — Dashboard de NPS (SLMandic)
 
-Documento de continuidade: estado atual do projeto, decisões tomadas e o que falta. Última atualização: 2026-09-15.
+Documento de continuidade: estado atual do projeto, decisões tomadas e o que falta. Última atualização: 2026-09-16.
 
 ## Próximo passo imediato (retomar daqui)
 
-**Os 4 dashboards deste workspace estão atualizados, publicados no GitHub Pages e comparados com a
-versão de referência (conta antiga `TCM-18`, ainda mantida em paralelo por outra pessoa). Só faltam 2
-decisões/verificações externas (não são bugs de código) -- ver "Pendências" no fim deste arquivo, e o
-resumo em `COMPARACAO_TCM18.txt` (raiz, não versionado, feito pra validação em 16/09/2026).**
+**Os 4 dashboards + o hub de navegação estão atualizados e publicados no GitHub Pages. As pendências
+externas que constavam aqui (turma "Dermatologia Cirúrgica" na ConsultaJá e a aba "Turmas Pagas" do
+agendas_pgmed) já foram resolvidas -- ver "O que já funciona" abaixo. Não há pendência bloqueante aberta
+no momento; ver "Pendências / próximos passos" no fim deste arquivo pra itens menores.**
+
+### Limpeza de repositório (16/09/2026)
+
+Removidos 5 scripts órfãos de `pipeline/` (raiz) que tinham sido substituídos pelo `atualizar_tudo.py`
+atual mas nunca apagados: `main.py`, `update_attendance.py` e `atualizar_local.py` (CLIs/orquestradores
+antigos, cada um cobria só uma fatia do que `atualizar_tudo.py` já faz num comando só) e
+`explore_planilha.py`/`comparar_planilhas.py` (scripts de validação pontual, já cumpriram o papel).
+`pipeline/README.md` foi reescrito pra descrever só o fluxo atual. Também removida a nota local
+`COMPARACAO_TCM18.txt` (as pendências que ela registrava já foram resolvidas, ver acima) e uma pasta
+vazia órfã (`agendas-pac-real/dados-fonte/`, sem uso -- a pasta compartilhada é a da raiz).
+
+### Hub de navegação (16/09/2026): 5º repositório
+
+Criado `hub/` -- página estática só com cards linkando pros 4 dashboards (sem pipeline, sem dado
+próprio), pensada como ponto único de entrada. Publicada em `https://pg-med-mandic.github.io/Hub/`. Os
+cards abrem na mesma aba (não em nova), e cada um dos 4 dashboards ganhou um botão flutuante "← Hub"
+(canto inferior esquerdo) pra voltar -- evita acumular abas abertas.
 
 ### Mudança de estrutura importante (15/09/2026): workspace consolidado
 
 Esta pasta (`NPS-PACIENTE`) deixou de ser só o repositório do dashboard de NPS de paciente -- agora é a
-**pasta-mãe de 4 repositórios independentes**, cada um com seu próprio `.git`/remoto, vivendo juntos só
+**pasta-mãe de 5 repositórios independentes**, cada um com seu próprio `.git`/remoto, vivendo juntos só
 por conveniência (pra atualizar tudo num lugar só, ver `CONTEXTO-GITHUB.md` na raiz, não versionado):
 
 1. **raiz desta pasta** (`index.html`/`script.js`/`pipeline/`) -- este dashboard (NPS de paciente).
 2. **`agendas-pac-real/`** -- Dashboard Triagem (ConsultaJá).
-3. **`agendas_pgmed/`** -- Acompanhamento Semanal de Práticas (planilha do SharePoint).
+3. **`agendas_pgmed/`** -- Acompanhamento Semanal de Práticas (planilha do SharePoint + ConsultaJá).
 4. **`csat/`** -- CSAT Pós Med / dataset "CSAT por item" (Indecx, pesquisa diferente da de paciente).
+5. **`hub/`** -- página de navegação entre os 4 dashboards acima (ver seção própria).
 
-O `.gitignore` da raiz ignora as 3 subpastas (cada uma é commitada/publicada separadamente, `cd` até ela
-antes de `git add`/`commit`/`push`) e os arquivos de nota local (`CONTEXTO-GITHUB.md`,
-`COMPARACAO_TCM18.txt`).
+O `.gitignore` da raiz ignora as 4 subpastas (cada uma é commitada/publicada separadamente, `cd` até ela
+antes de `git add`/`commit`/`push`) e o arquivo de nota local (`CONTEXTO-GITHUB.md`).
 
 **Conta do GitHub também mudou**: migrado de `TCM-18` (antiga, ainda mantida por outra pessoa em
 paralelo -- ver seção de comparação abaixo) para `PG-MED-MANDIC` (atual, onde tudo daqui pra frente deve
-ser publicado). Os 4 repositórios estão com **GitHub Pages ativado** (Settings → Pages → branch `main` →
-`/root`, ativado em 15/09/2026):
+ser publicado). Os 5 repositórios estão com **GitHub Pages ativado** (Settings → Pages → branch `main` →
+`/root`, ativado em 15/09/2026, `hub` em 16/09/2026):
 
+- `https://pg-med-mandic.github.io/Hub/` (ponto de entrada -- ver "Hub de navegação" acima)
 - `https://pg-med-mandic.github.io/Dashboard-de-NPS-Pacientes-Cl-nicas-P-s-M-dica/`
 - `https://pg-med-mandic.github.io/agendas-pac-real/`
 - `https://pg-med-mandic.github.io/csat/`
@@ -38,8 +56,8 @@ ser publicado). Os 4 repositórios estão com **GitHub Pages ativado** (Settings
 
 - **Indecx (NPS de paciente) resolvido de ponta a ponta.** `indecx_client.py` replica o fluxo de automação de
   `ouvidoria-csat/motor` (login → solicitar exportação → polling → download). `pipeline/.env` preenchido e
-  testado. Validado contra export manual do Indecx duas vezes (03/09 e 04/09) via `comparar_planilhas.py`
-  (célula a célula, sem expor dado sensível) -- sempre 0 diferenças nas respostas em comum.
+  testado. Validado contra export manual do Indecx duas vezes (03/09 e 04/09), célula a célula sem expor
+  dado sensível -- sempre 0 diferenças nas respostas em comum.
 - **CONSULTAJA_END_DATE agora é automático** (`pipeline/config.py: default_consultaja_end_date()`): sempre
   fim do mês, 2 meses à frente de hoje, recalculado a cada execução -- não precisa mais editar o `.env`
   manualmente quando o mês vira.
@@ -63,8 +81,9 @@ ser publicado). Os 4 repositórios estão com **GitHub Pages ativado** (Settings
 
 - **`agendas-pac-real`**: pipeline Python completo (`pipeline/atualizar_tudo.py`), mesmo padrão da raiz --
   busca ConsultaJá (reaproveitando a planilha da raiz quando possível), gera `RAW`/`RAWD`/`RAWH`/`DAYCNT`
-  em `index.html`. Testado contra dado real: **100% das combinações turma+data batem com a versão de
-  referência (TCM-18)**, exceto 1 turma que nosso token não enxerga -- ver "Pendências".
+  em `index.html`. A turma "Dermatologia Cirúrgica T2" (São Paulo), que parecia ausente do nosso token em
+  15/09, **já apareceu na planilha baixada em 16/09** (curso+turma+unidade batem certinho com a
+  ConsultaJá) -- não era bug, foi resolvido do lado do token/permissão entre um dia e outro.
 - **`csat`**: pipeline Python completo -- busca a pesquisa "CSAT por item" no Indecx (mesma conta da raiz,
   `groupId`/`actionId`/`metric` próprios) e regrava `DATA_GERAL`/`DATA_ITENS`/`DATA_FEEDBACK`/`DATA_TURMAS`.
   **Não cobre** o dataset "NPS Pós-Médica" (`DATA_NPS`/`DATA_FEEDBACK_FULL`, pesquisa Indecx ainda não
@@ -73,28 +92,31 @@ ser publicado). Os 4 repositórios estão com **GitHub Pages ativado** (Settings
   `csat/pipeline/README.md` > "Fórmula dos itens". Resultado: **0 diferenças em todos os campos, nas 2193
   respostas em comum** com a versão de referência.
 - **`agendas_pgmed`**: pipeline Python completo -- processa `checklist-captacao.xlsx` (baixado manualmente
-  do SharePoint, ver `agendas_pgmed/pipeline/README.md`) e regrava `RAW` em `index.html`. Corrigidos 2 bugs
-  reais: colunas renomeadas na planilha a partir de Set./2026 que o botão de upload manual não reconhecia,
-  e um erro de digitação no cabeçalho da aba de Maio. Resultado: **as mesmas 1213 combinações turma+data em
-  ambos os lados**, valores de capacidade idênticos -- só "agendamentos" varia (esperado, datas futuras
-  recebendo novas matrículas).
+  do SharePoint, ver `agendas_pgmed/pipeline/README.md`) e regrava `RAW`/`PAGAS_DATA` em `index.html`.
+  Corrigidos 2 bugs reais: colunas renomeadas na planilha a partir de Set./2026 que o botão de upload
+  manual não reconhecia, e um erro de digitação no cabeçalho da aba de Maio.
+  **Turmas Pagas automatizada (16/09/2026)**: a aba "💰 Turmas Pagas" (antes um array fixo, só Setembro,
+  digitado à mão) agora é gerada pelo pipeline a partir das colunas "É paga?"/"Valor total" da própria
+  planilha, pra todos os meses com dado -- ver `agendas_pgmed/pipeline/README.md` > "Turmas Pagas".
+  **"Agendamentos" agora vem da ConsultaJá, não da checklist (16/09/2026)**: a coluna "Agendamentos" da
+  checklist-captacao é preenchida à mão e refletia quem estava *programado* (podia faltar), não quem
+  *realmente veio*. `attendance_consultaja.py` cruza cada turma+data com a mesma planilha da ConsultaJá
+  (curso+turma+unidade+data) e usa o comparecimento real (`Compareceu`/`Atendido`) -- mudou a maioria dos
+  valores (pra baixo, como esperado). "Slots previstos" continua vindo só da checklist. Ver
+  `agendas_pgmed/pipeline/README.md` > "De onde vem o número de Agendamentos".
 
-### Comparação com a conta antiga (TCM-18) -- achados de 15/09/2026
+### Comparação com a conta antiga (TCM-18) -- achados de 15/09/2026 (resolvida em 16/09/2026)
 
-A conta antiga (`TCM-18`) continua sendo atualizada por outra pessoa em paralelo à migração (`csat` em
+A conta antiga (`TCM-18`) continuava sendo atualizada por outra pessoa em paralelo à migração (`csat` em
 15/09, `agendas_pgmed` e `agendas-pac-real` em 14/09 -- todos **depois** da migração pra `PG-MED-MANDIC`
-em 11/09). Comparei dado a dado com nossos 3 repositórios equivalentes (ver `COMPARACAO_TCM18.txt`, não
-versionado, escrito em linguagem simples pra validação):
+em 11/09). Comparei dado a dado com nossos 3 repositórios equivalentes; as 2 diferenças achadas em 15/09
+já foram resolvidas em 16/09 (ver "Repositórios irmãos" acima) -- a nota de validação (`COMPARACAO_TCM18.txt`)
+foi removida por já ter cumprido o papel.
 
-- **`csat`**: corrigido, bate 100% agora (ver acima).
-- **`agendas_pgmed`**: a versão de referência ganhou uma aba nova, "💰 Turmas Pagas" (simulação de receita
-  de práticas extracurriculares pagas), alimentada por uma marcação manual (turma por turma) que não vem
-  de nenhuma planilha -- não replicado aqui ainda. Precisa: (a) a lista de quais turmas são pagas, (b)
-  construir a aba (desenvolvimento novo, não é ajuste de pipeline).
-  **Nota**: essa aba não muda o texto de "Última atualização" do card do dashboard.
-- **`agendas-pac-real`**: falta 1 turma ("Dermatologia Cirúrgica" T2, São Paulo) que existe na versão de
-  referência mas não aparece nem na nossa planilha bruta da ConsultaJá -- é limitação de escopo/permissão
-  do nosso token, não bug de transformação (confirmado: 59 de 60 combinações curso+turma batem).
+- **`csat`**: bate 100% (corrigido em 15/09).
+- **`agendas_pgmed`**: aba "💰 Turmas Pagas" automatizada em 16/09.
+- **`agendas-pac-real`**: turma "Dermatologia Cirúrgica T2" (São Paulo) já aparece na planilha da
+  ConsultaJá baixada em 16/09.
 
 ## Estrutura do projeto
 
@@ -104,33 +126,29 @@ NPS-PACIENTE/                (pasta-mãe do workspace -- ver "Mudança de estrut
   style.css            tema navy/gold, claro/escuro
   script.js            dados embutidos (RECORDS/WEEKLY/ATENDIMENTOS) + toda a lógica de gráficos/filtros
   README.md            visão geral do dashboard + fluxo de atualização/publicação
-  .gitignore            raiz do projeto -- protege .env, dado bruto, .venv, log local, e as 3 subpastas
+  .gitignore            raiz do projeto -- protege .env, dado bruto, .venv, log local, e as 4 subpastas
                         de repositórios irmãos (ver abaixo)
   CONTEXTO-GITHUB.md   nota de workspace multi-repositório (não versionado -- só referência local)
-  COMPARACAO_TCM18.txt nota de comparação com a conta antiga (não versionado -- validação de 16/09/2026)
   Atualizar Dashboard.bat   atalho local: roda atualizar_tudo.py (as duas fontes) e mostra o resumo
   COMO_ATUALIZAR.txt   passo a passo de atualização/publicação pro usuário rodar sozinho
 
   dados-fonte/          planilhas brutas (gitignored -- nunca versionar/hospedar), COMPARTILHADA com
-                        agendas-pac-real/ (mesma conta ConsultaJá) e agendas_pgmed/ (planilha do SharePoint)
+                        agendas-pac-real/ (mesma conta ConsultaJá) e agendas_pgmed/ (ConsultaJá + planilha
+                        do SharePoint)
 
-  pipeline/             scripts Python que regeneram os dados de script.js
-    main.py                  RECORDS/WEEKLY a partir de export do Indecx (planilha em mãos ou baixada via API)
-    update_attendance.py     ATENDIMENTOS a partir da base de agendamentos
+  pipeline/             scripts Python que regeneram os dados de script.js -- um comando só (ver abaixo)
     fetch_consultaja.py      busca a base de agendamentos direto na API da ConsultaJá (opcional, manual)
     fetch_indecx.py          busca a planilha de NPS de paciente direto na API do Indecx (opcional, manual)
-    atualizar_local.py       orquestra só fetch_consultaja.py + update_attendance.py (superseded por atualizar_tudo.py)
     atualizar_tudo.py        orquestra as DUAS fontes num comando só -- reaproveita planilha ConsultaJá do
                               dia se agendas-pac-real (ou este) já tiver baixado
-    comparar_planilhas.py    compara duas planilhas do Indecx célula a célula, sem expor dado sensível
-    explore_planilha.py      explora estrutura de uma planilha nova sem expor dado de paciente
     attendance.py, transform.py, loaders.py, sanitize.py, render_script.py, config.py, indecx_client.py, consultaja_client.py
     atualizacoes.log         (gitignored) histórico local das execuções -- só contagens agregadas
-    README.md                 como rodar cada script
+    README.md                 como rodar o pipeline
 
   agendas-pac-real/     repositório irmão (git próprio) -- ver seu README.md e pipeline/README.md
   csat/                 repositório irmão (git próprio) -- ver seu README.md e pipeline/README.md
   agendas_pgmed/        repositório irmão (git próprio) -- ver seu README.md e pipeline/README.md
+  hub/                  repositório irmão (git próprio) -- página de navegação entre os 4 acima
 ```
 
 Não existe Node/build step -- é HTML/CSS/JS puro servido estaticamente. O Python do pipeline é só para regenerar os dados embutidos em `script.js`; o dashboard em si não depende de Python em tempo de execução.
@@ -146,10 +164,8 @@ Não existe Node/build step -- é HTML/CSS/JS puro servido estaticamente. O Pyth
 - Filtro global por unidade (topo da página) e tema claro/escuro.
 
 **Pipeline Python**
-- `main.py --source file --input planilha.xlsx` -- lê export do Indecx, gera `RECORDS`/`WEEKLY`.
-- `update_attendance.py planilha.xlsx` -- lê a base de agendamentos, gera `ATENDIMENTOS`.
-- `fetch_consultaja.py` -- busca agendas/agendamentos direto na API da ConsultaJá e salva o Excel em `dados-fonte/` (mesmo formato que já era exportado manualmente). Substitui só o passo de exportar a planilha à mão; o próximo passo continua sendo `update_attendance.py` no arquivo gerado. Roda só quando chamado manualmente -- não há agendador/cron configurado, por decisão consciente (cada resposta da API traz nome/celular de paciente).
 - `atualizar_tudo.py` (chamado por `Atualizar Dashboard.bat`, na raiz) -- encadeia as duas fontes (ConsultaJá + Indecx) num só clique local: busca nas APIs (reaproveitando a planilha da ConsultaJá do dia se `agendas-pac-real` já tiver baixado), recalcula `ATENDIMENTOS`/`RECORDS`/`WEEKLY`, grava `script.js` e imprime um resumo (o que mudou, o que falhou se falhou). Se algo quebrar antes do passo de gravação, `script.js` não é tocado. O resumo também vai para `pipeline/atualizacoes.log` (gitignored) -- só contagens agregadas, nunca nome/celular de paciente.
+- `fetch_consultaja.py`/`fetch_indecx.py` -- buscam as duas fontes direto nas APIs (chamados por `atualizar_tudo.py`; rodar sozinho é só pra debug pontual). Não há agendador/cron configurado, por decisão consciente (cada resposta da API traz nome/celular/comentário de paciente).
 - `render_script.py: upsert_const()` -- mecanismo genérico que substitui só a linha da constante de dados que está sendo atualizada, sem tocar no resto do `script.js` (gráficos/filtros intactos).
 - Anonimização por lista de permissão: só os campos que o dashboard usa são extraídos; qualquer coluna de nome/e-mail/telefone/CPF/prontuário é descartada automaticamente, mesmo sem filtrar manualmente.
 - `sanitize.py` varre o comentário livre e remove e-mail/CPF/telefone digitado por engano.
@@ -195,20 +211,15 @@ Todos partem do mesmo conjunto de respostas: primeiro filtra por unidade (`filte
 
 ## Pendências / próximos passos
 
-1. **`agendas-pac-real`**: verificar com quem administra a ConsultaJá por que a turma "Dermatologia
-   Cirúrgica T2" (São Paulo) não aparece no nosso token/conta -- existe na versão de referência (TCM-18).
-2. **`agendas_pgmed`**: decidir se querem a aba "💰 Turmas Pagas" (simulação de receita) que a versão de
-   referência ganhou -- precisa da lista de quais turmas são pagas (não vem de planilha nenhuma) e de
-   desenvolvimento novo (não é só ajuste de pipeline).
-3. **`csat`**: dataset "NPS Pós-Médica" (`DATA_NPS`/`DATA_FEEDBACK_FULL`) continua sem pipeline automatizado
+1. **`csat`**: dataset "NPS Pós-Médica" (`DATA_NPS`/`DATA_FEEDBACK_FULL`) continua sem pipeline automatizado
    -- pesquisa Indecx de origem (`groupId`/`actionId`) ainda não identificada. Também não sabemos ainda como
    a versão de referência gera esses dois datasets (não é o botão de upload da própria página).
-4. **Navegação de períodos**: hoje o seletor Dia/Semana/Mês/Ano da Visão geral só mostra o período mais
+2. **Navegação de períodos**: hoje o seletor Dia/Semana/Mês/Ano da Visão geral só mostra o período mais
    recente. Navegar pra períodos anteriores fica pra uma próxima iteração.
-5. Se a base de agendamentos for atualizada (novo arquivo em `dados-fonte/`), rodar `atualizar_tudo.py` de
+3. Se a base de agendamentos for atualizada (novo arquivo em `dados-fonte/`), rodar `atualizar_tudo.py` de
    novo. Não precisa rodar toda vez que só uma fonte mudar.
-6. **`fetch_and_save()` (ConsultaJá) sobrescreve sem checar** se já existe arquivo com o mesmo nome no dia --
+4. **`fetch_and_save()` (ConsultaJá) sobrescreve sem checar** se já existe arquivo com o mesmo nome no dia --
    cuidado ao colocar planilha manual em `dados-fonte/` com esse nome no dia de rodar o fetch.
-7. **Segurança (achado, não corrigido)**: os outros 2 repositórios do workspace antigo que NÃO foram
+5. **Segurança (achado, não corrigido)**: os outros 2 repositórios do workspace antigo que NÃO foram
    trazidos pra cá (`coord_mandic`, `score-operacional`) têm senha/e-mail de gestor fixos no código-fonte,
    em repositórios públicos -- ver `CONTEXTO-GITHUB.md`. Não é deste projeto, mas fica registrado.
