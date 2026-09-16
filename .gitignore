@@ -23,6 +23,7 @@ pipeline/atualizacoes.log
 /agendas-pac-real/
 /agendas_pgmed/
 /csat/
+/hub/
 
 # Nota de workspace multi-repositório -- só referência local, não versionada
 # (mesma convenção do CONTEXTO-GITHUB.md antigo, em troca-github/).
