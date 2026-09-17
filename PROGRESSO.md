@@ -1,6 +1,6 @@
 # Progresso — Dashboard de NPS (SLMandic)
 
-Documento de continuidade: estado atual do projeto, decisões tomadas e o que falta. Última atualização: 2026-09-16.
+Documento de continuidade: estado atual do projeto, decisões tomadas e o que falta. Última atualização: 2026-09-17.
 
 ## Próximo passo imediato (retomar daqui)
 
@@ -8,6 +8,21 @@ Documento de continuidade: estado atual do projeto, decisões tomadas e o que fa
 externas que constavam aqui (turma "Dermatologia Cirúrgica" na ConsultaJá e a aba "Turmas Pagas" do
 agendas_pgmed) já foram resolvidas -- ver "O que já funciona" abaixo. Não há pendência bloqueante aberta
 no momento; ver "Pendências / próximos passos" no fim deste arquivo pra itens menores.**
+
+### Rodada de atualização (17/09/2026)
+
+Rodados os 4 pipelines e publicado nos 4 repositórios: raiz (160 respostas de NPS, 768 combinações
+dia+unidade em `ATENDIMENTOS`), `agendas-pac-real`, `csat` (2230 respostas) e `agendas_pgmed` (este
+último com `checklist-captacao.xlsx` ainda na versão de 15/09 -- SharePoint não foi rebaixado nesta
+rodada, só a parte de Agendamentos via ConsultaJá foi atualizada).
+
+**Bug real encontrado e corrigido em `agendas-pac-real/pipeline/render_index.py`**: a regex de
+`upsert_last_update()` só reconhecia `<div id="last-update">` com `id` como primeiro atributo. O commit
+`e204a90` (15-16/09) tinha adicionado `class="hdr-date"` antes do `id`, o que quebrava silenciosamente a
+atualização do timestamp (os dados em si -- `RAW`/`RAWD`/`RAWH`/`DAYCNT` -- continuavam sendo gravados
+certo, só o passo do timestamp falhava e abortava o script). Regex trocada pra
+`<div[^>]*\bid="last-update"[^>]*>`, agnóstica à ordem dos atributos. `csat` e `agendas_pgmed` não tinham
+esse problema (`id` já vem primeiro nos dois).
 
 ### Limpeza de repositório (16/09/2026)
 
