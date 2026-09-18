@@ -1,6 +1,6 @@
 # Progresso — Dashboard de NPS (SLMandic)
 
-Documento de continuidade: estado atual do projeto, decisões tomadas e o que falta. Última atualização: 2026-09-17.
+Documento de continuidade: estado atual do projeto, decisões tomadas e o que falta. Última atualização: 2026-09-18.
 
 ## Próximo passo imediato (retomar daqui)
 
@@ -8,6 +8,48 @@ Documento de continuidade: estado atual do projeto, decisões tomadas e o que fa
 externas que constavam aqui (turma "Dermatologia Cirúrgica" na ConsultaJá e a aba "Turmas Pagas" do
 agendas_pgmed) já foram resolvidas -- ver "O que já funciona" abaixo. Não há pendência bloqueante aberta
 no momento; ver "Pendências / próximos passos" no fim deste arquivo pra itens menores.**
+
+### Rodada de atualização (18/09/2026)
+
+Rodados os 4 pipelines e publicado nos 4 repositórios: raiz (160 respostas de NPS, 771 combinações
+dia+unidade em `ATENDIMENTOS`), `agendas-pac-real` (1213 combinações unidade/curso/turma/data em SLOTS),
+`csat` (2237 respostas) e `agendas_pgmed` (1213 linhas de prática, 48 turmas pagas em 4 meses) --
+`checklist-captacao.xlsx` (SharePoint) segue na versão de 15/09, não rebaixada nesta rodada, só a parte de
+Agendamentos/Slots via ConsultaJá foi atualizada. Hub sem mudanças (não depende de dado, nada a publicar).
+Avisos de sanitização e de turmas sem correspondência na ConsultaJá (mesmos de rodadas anteriores) --
+revisar manualmente se necessário, não bloqueiam a publicação.
+
+### Correções de cálculo e pipeline (17/09/2026, tarde)
+
+**`agendas_pgmed` (Acompanhamento Semanal de Práticas) -- bug real: ocupação zerada em semanas
+futuras.** A decisão de 16/09 (usar só `Compareceu`/`Atendido` da ConsultaJá pra "Agendamentos") tinha um
+problema: datas que ainda não aconteceram nunca têm esses status, então qualquer semana futura aparecia
+com ~0% de ocupação mesmo já tendo pacientes marcados -- reportado pelo usuário comparando a semana atual
+com uma futura no dashboard. Corrigido em `attendance_consultaja.py`: agora conta qualquer Status
+**diferente de "Cancelado"** (Agendado, Confirmado, Compareceu, Atendido, Faltou) -- um paciente que
+faltou ainda ocupou o slot no momento em que agendou, só o cancelamento libera a vaga. Não depende de
+"hoje" pra funcionar. Ver `agendas_pgmed/pipeline/README.md` > "De onde vem o número de Agendamentos"
+(substitui a decisão de 16/09 registrada nesta mesma seção mais abaixo). Commit `580bff3`.
+
+**`agendas-pac-real` (Dashboard Triagem) -- 3 mudanças na aba "Slots x Realizado" e "Por Dia":**
+
+1. **`SLOTS` (capacidade planejada) era um array colado à mão dentro do `index.html`**, nunca atualizado
+   pelo pipeline -- parava em 30/09/2026. Criado `pipeline/transform_slots.py`: lê
+   `dados-fonte/checklist-captacao.xlsx` (mesmo arquivo do `agendas_pgmed`) a cada execução e casa a
+   grafia de "Curso" com a já usada na ConsultaJá (mesma técnica do `attendance_consultaja.py` do pipeline
+   vizinho), pra achar as chaves certas dentro de `RAWD`. Agora cobre até 30/11/2026.
+2. **Bug real em "Dias com Atendimento" (aba Por Dia)**: `% Cancelamento` calculava
+   `Cancelados ÷ (Realizados+Faltas+Cancelados)`, excluindo "Agendados" do denominador -- pra hoje e dias
+   futuros (onde a maioria ainda está só agendada, sem desfecho) isso inflava o % até 98-100%, reportado
+   pelo usuário ("não parece estar certo"). Corrigido: denominador agora inclui Agendados
+   (`renderDayList()`/`renderDayDetail()`).
+3. **Cabeçalho da tabela "Dias com Atendimento" agora é sticky** dentro do scroll interno da seção
+   (`#pd .rtable th`), escopado só pra essa aba.
+4. **"Última atualização" agora só avança quando os dois dados-fonte são conferidos com sucesso na mesma
+   rodada** (ConsultaJá E checklist-captacao/SLOTS) -- antes avançava mesmo rodando só a parte da
+   ConsultaJá. Ver `agendas-pac-real/pipeline/README.md` > "Última atualização".
+
+Todas verificadas localmente (recálculo em Python + navegador) antes do commit. Commit `3369665`.
 
 ### Rodada de atualização (17/09/2026)
 
@@ -113,11 +155,13 @@ ser publicado). Os 5 repositórios estão com **GitHub Pages ativado** (Settings
   **Turmas Pagas automatizada (16/09/2026)**: a aba "💰 Turmas Pagas" (antes um array fixo, só Setembro,
   digitado à mão) agora é gerada pelo pipeline a partir das colunas "É paga?"/"Valor total" da própria
   planilha, pra todos os meses com dado -- ver `agendas_pgmed/pipeline/README.md` > "Turmas Pagas".
-  **"Agendamentos" agora vem da ConsultaJá, não da checklist (16/09/2026)**: a coluna "Agendamentos" da
+  **"Agendamentos" agora vem da ConsultaJá, não da checklist (16/09/2026, revertido em 17/09/2026 --
+  ver "Correções de cálculo e pipeline" no topo deste arquivo)**: a coluna "Agendamentos" da
   checklist-captacao é preenchida à mão e refletia quem estava *programado* (podia faltar), não quem
   *realmente veio*. `attendance_consultaja.py` cruza cada turma+data com a mesma planilha da ConsultaJá
-  (curso+turma+unidade+data) e usa o comparecimento real (`Compareceu`/`Atendido`) -- mudou a maioria dos
-  valores (pra baixo, como esperado). "Slots previstos" continua vindo só da checklist. Ver
+  (curso+turma+unidade+data). A versão de 16/09 usava só o comparecimento real (`Compareceu`/`Atendido`),
+  o que zerava a ocupação de qualquer semana futura; a de 17/09 conta qualquer Status != "Cancelado".
+  "Slots previstos" continua vindo só da checklist. Ver
   `agendas_pgmed/pipeline/README.md` > "De onde vem o número de Agendamentos".
 
 ### Comparação com a conta antiga (TCM-18) -- achados de 15/09/2026 (resolvida em 16/09/2026)
