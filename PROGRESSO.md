@@ -9,6 +9,24 @@ externas que constavam aqui (turma "Dermatologia Cirúrgica" na ConsultaJá e a 
 agendas_pgmed) já foram resolvidas -- ver "O que já funciona" abaixo. Não há pendência bloqueante aberta
 no momento; ver "Pendências / próximos passos" no fim deste arquivo pra itens menores.**
 
+### Rodada de atualização (19/09/2026 09:41) -- automática via n8n
+
+Rodados e publicados automaticamente: `agendas-pac-real` (OK -- 2168 combina��es m�s/curso/turma � 2168 combina��es dia/curso/turma � 1704 combina��es de hora � 283 combina��es m�s/semana.; OK -- 1213 combina��es unidade/curso/turma/data com slots previstos.) -- publicado; `agendas_pgmed` (OK -- 1213 linhas de pr�tica.; OK -- Turmas Pagas: 48 turmas em 4 m�s(es) (06, 07, 08, 09).) -- publicado.
+
+Avisos: Avisos (revisar manualmente): | Avisos (revisar manualmente):
+
+### Rodada de atualização (19/09/2026 09:29) -- automática via n8n
+
+Rodados e publicados automaticamente: `raiz` (OK -- planilha salva em dados-fonte\Base_Consulta_Ja26_09_19.xlsx (compartilhada com o pipeline do agendas-pac-real).; OK -- 776 combina��es dia+unidade.; OK -- planilha salva em dados-fonte\export_indecx_26_09_19.xlsx; OK -- 173 respostas � 15 semanas.) -- publicado; `csat` (OK -- planilha salva em dados-fonte\export_indecx_csat_26_09_19.xlsx.; OK -- 2274 respostas � 18192 avalia��es de item � 1422 coment�rios � 461 combina��es turma/m�s.) -- publicado.
+
+Avisos: Aviso: unidades sem correspondente no NPS, exclu�das do agregado por completo: Online (673) | Avisos de sanitiza��o (revisar manualmente):
+
+### Rodada de atualização (18/09/2026 14:47) -- automática via n8n
+
+Rodados e publicados automaticamente: `raiz` (OK -- 771 combina��es dia+unidade.; OK -- planilha salva em dados-fonte\export_indecx_26_09_18.xlsx; OK -- 165 respostas � 15 semanas.) -- publicado; `agendas-pac-real` (OK -- 2150 combina��es m�s/curso/turma � 2150 combina��es dia/curso/turma � 1701 combina��es de hora � 282 combina��es m�s/semana.; OK -- 1213 combina��es unidade/curso/turma/data com slots previstos.) -- publicado; `csat` (OK -- 2237 respostas � 17896 avalia��es de item � 1403 coment�rios � 454 combina��es turma/m�s.) -- publicado; `agendas_pgmed` (OK -- 1213 linhas de pr�tica.; OK -- Turmas Pagas: 48 turmas em 4 m�s(es) (06, 07, 08, 09).) -- publicado.
+
+Avisos: Aviso: unidades sem correspondente no NPS, exclu�das do agregado por completo: Online (673) | Aviso: export_indecx_26_09_18.xlsx j� existe e ser� sobrescrito. | Avisos de sanitiza��o (revisar manualmente): | Avisos (revisar manualmente): | Avisos (revisar manualmente):
+
 ### Rodada de atualização (18/09/2026)
 
 Rodados os 4 pipelines e publicado nos 4 repositórios: raiz (160 respostas de NPS, 771 combinações
