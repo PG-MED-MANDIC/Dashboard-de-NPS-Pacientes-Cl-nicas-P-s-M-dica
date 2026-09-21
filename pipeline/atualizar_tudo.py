@@ -27,6 +27,7 @@ import sys
 import traceback
 from datetime import date, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from attendance import load_attendance
 from attendance import to_records as attendance_to_records
@@ -38,6 +39,11 @@ from indecx_client import IndecxConfigurationError
 from loaders import read_from_file
 from render_script import upsert_const
 from transform import build_records, build_weekly
+
+# Desde a migração pro GitHub Actions (2026-09-21), o runner roda em UTC --
+# sem fuso explícito, "última atualização" saía 3h atrasada (hora de
+# Brasília não observa horário de verão desde 2019, sempre UTC-3).
+FUSO_BR = ZoneInfo("America/Sao_Paulo")
 
 LOG_PATH = PIPELINE_DIR / "atualizacoes.log"
 
@@ -142,7 +148,7 @@ def main() -> int:
     ok_nps = _atualizar_nps(report)
 
     if ok_atendimentos and ok_nps:
-        upsert_const(SCRIPT_JS_PATH, "DASHBOARD_UPDATED_AT", f"{datetime.now():%d/%m/%Y %H:%M}")
+        upsert_const(SCRIPT_JS_PATH, "DASHBOARD_UPDATED_AT", f"{datetime.now(FUSO_BR):%d/%m/%Y %H:%M}")
         report.append(
             "\nTudo certo. Próximos passos (ver README.md > \"Atualizar os dados e publicar\"):\n"
             "  git status\n"
